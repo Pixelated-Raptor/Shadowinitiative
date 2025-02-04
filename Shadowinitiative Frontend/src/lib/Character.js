@@ -9,6 +9,8 @@ export class Character {
         this.moddedInitiativePasses = Number(initiativePasses);
         this.edge = Number(edge);
         this.woundModifiers = Number(woundModifiers);
+
+        this.isVisible = false;
     }
 
     getName() {return this.name;}
@@ -34,4 +36,7 @@ export class Character {
 
     getWoundModifiers() {return this.woundModifiers;}
     setWoundModifiers(newWoundModifiers) {this.woundModifiers = newWoundModifiers;}
+
+    getVisibility() {return this.isVisible;}
+    toggleVisibility() {this.isVisible = !this.isVisible;}
 }

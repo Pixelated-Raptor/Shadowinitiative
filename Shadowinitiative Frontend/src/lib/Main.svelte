@@ -19,8 +19,8 @@
 </div>
 
 <script>
-    import AddCharacterForm from './AddCharacterForm.svelte';
-    import ListAvailableCharacters from './ListAvailableCharacters.svelte';
+    import AddCharacterForm from "./AddCharacterForm.svelte";
+    import ListAvailableCharacters from "./ListAvailableCharacters.svelte";
 </script>
 
 
