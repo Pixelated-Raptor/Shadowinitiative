@@ -1,25 +1,19 @@
 export class Character {
-    //Typenprüfung im Eingabeformular durchführen!
-    constructor(name, initiative, initiativePasses, reaction, intuition, edge, woundModifiers) {
+    constructor(name, reaction, intuition, initiativePasses, edge, woundModifiers) {
         this.name = name;
-        this.baseInitiative = initiative;
-        this.moddedInitiative = initiative;
-        this.baseInitiativePasses = initiativePasses;
-        this.moddedInitiativePasses = initiativePasses;
-        this.baseReaction = reaction;
-        this.moddedReaction = reaction;
-        this.baseIntuition = intuition;
-        this.moddedIntuition = intuition;
-        this.edge = edge;
-        this.woundModifiers = woundModifiers;
+        this.baseReaction = Number(reaction);
+        this.moddedReaction = Number(reaction);
+        this.baseIntuition = Number(intuition);
+        this.moddedIntuition = Number(intuition);
+        this.baseInitiativePasses = Number(initiativePasses);
+        this.moddedInitiativePasses = Number(initiativePasses);
+        this.edge = Number(edge);
+        this.woundModifiers = Number(woundModifiers);
     }
 
     getName() {return this.name;}
 
-    getBaseInitiative() {return this.baseInitiative;}
-
-    getModdedInitiative() {return this.moddedInitiative;}
-    setModdedInitiative(newInitiative) {this.moddedInitiative = newInitiative;}
+    getInitiative() {return this.moddedReaction + this.moddedIntuition + this.woundModifiers;}
 
     getBaseInitiativePasses() {return this.baseInitiativePasses;}
 
