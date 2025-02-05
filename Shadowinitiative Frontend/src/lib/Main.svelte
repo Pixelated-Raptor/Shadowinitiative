@@ -18,9 +18,17 @@
     </div>
 </div>
 
+<div class="ExportImport">
+    <hr>
+    <CSVComponent />
+</div>
+
+
+
 <script>
     import AddCharacterForm from "./AddCharacterForm.svelte";
     import ListAvailableCharacters from "./ListAvailableCharacters.svelte";
+    import CSVComponent from "./CSVComponent.svelte";
 </script>
 
 
