@@ -3,7 +3,7 @@ import { Character } from "./Character";
 
 const localStorageKey = "shadowinitiative_sl_characters";
 
-function loadSLCharacters() {
+function loadGMCharacters() {
     const storedCharacters = localStorage.getItem(localStorageKey);
     if (storedCharacters) {
         return JSON.parse(storedCharacters).map(char => new Character(
@@ -18,39 +18,39 @@ function loadSLCharacters() {
     return [];
 }
 
-function saveSLCharacters(characters) {
+function saveGMCharacters(characters) {
     localStorage.setItem(localStorageKey, JSON.stringify(characters));
 }
 
-export const slCharacters = writable(loadSLCharacters());
+export const GMCharacters = writable(loadGMCharacters());
 
-slCharacters.subscribe(value => {
-    saveSLCharacters(value);
+GMCharacters.subscribe(value => {
+    saveGMCharacters(value);
 });
 
-export function addSLCharacter(character) {
-    slCharacters.update(currentCharacters => {
+export function addGMCharacter(character) {
+    GMCharacters.update(currentCharacters => {
         const updatedCharacters = [...currentCharacters, character];
-        saveSLCharacters(updatedCharacters);
+        saveGMCharacters(updatedCharacters);
         return updatedCharacters;
     });
 }
 
-export function removeSLCharacter(character) {
-    slCharacters.update(currentCharacters => {
+export function removeGMCharacter(character) {
+    GMCharacters.update(currentCharacters => {
         const updatedCharacters = currentCharacters.filter(char => char !== character);
-        saveSLCharacters(updatedCharacters);
+        saveGMCharacters(updatedCharacters);
         return updatedCharacters;
     });
 }
 
-export function updateSLCharacter(character, updates) {
-    slCharacters.update(currentCharacters => {
+export function updateGMCharacter(character, updates) {
+    GMCharacters.update(currentCharacters => {
         const index = currentCharacters.indexOf(character);
         if (index !== -1) {
             const updatedCharacter = Object.assign(Object.create(Object.getPrototypeOf(character)), character, updates);
             currentCharacters[index] = updatedCharacter;
-            saveSLCharacters(currentCharacters);
+            saveGMCharacters(currentCharacters);
         }
         return currentCharacters;
     });

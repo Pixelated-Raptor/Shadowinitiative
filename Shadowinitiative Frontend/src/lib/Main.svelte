@@ -4,7 +4,7 @@
 </div>
 
 <hr>
-<SLTable />
+<GMTable />
 <hr>
 
 <div class="Characters">
@@ -29,7 +29,7 @@
     import AddCharacterForm from "./AddCharacterForm.svelte";
     import ListAvailableCharacters from "./ListAvailableCharacters.svelte";
     import CSVComponent from "./CSVComponent.svelte";
-    import SLTable from "./SLTable.svelte";
+    import GMTable from "./GMTable.svelte";
 </script>
 
 

@@ -1,13 +1,13 @@
 <script>
-    import { slCharacters, updateSLCharacter, removeSLCharacter } from "./SLStore";
+    import { GMCharacters, updateGMCharacter, removeGMCharacter } from "./GMStore";
 
     function updateInitiative(character, event) {
         const newInitiative = parseInt(event.target.value, 10);
-        updateSLCharacter(character, { initiative: newInitiative });
+        updateGMCharacter(character, { initiative: newInitiative });
     }
 
-    function removeFromSLTable(character) {
-        removeSLCharacter(character);
+    function removeFromGMTable(character) {
+        removeGMCharacter(character);
     }
 </script>
 
@@ -25,7 +25,7 @@
         </tr>
     </thead>
     <tbody>
-        {#each $slCharacters.sort((a, b) => b.initiative - a.initiative) as char}
+        {#each $GMCharacters.sort((a, b) => b.initiative - a.initiative) as char}
         <tr>
             <td>{char.getName()}</td>
             <td>{char.getInitiative()}</td>
@@ -34,7 +34,7 @@
             <td>{char.getModdedIntuition()}</td>
             <td>{char.getWoundModifiers()}</td>
             <td><input type="number" value={char.initiative} on:input={(event) => updateInitiative(char, event)} /></td>
-            <td><button on:click={() => removeFromSLTable(char)}>Entfernen</button></td>
+            <td><button on:click={() => removeFromGMTable(char)}>Entfernen</button></td>
         </tr>
         {/each}
     </tbody>
