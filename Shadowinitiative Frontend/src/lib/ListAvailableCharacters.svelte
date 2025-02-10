@@ -1,4 +1,4 @@
-<!-- List available Characters and allow modification of their base(!) stats. -->
+<!-- List available characters and allow modification of their base(!) stats. -->
 
 <ul>
     {#each $characters as char}
@@ -13,7 +13,7 @@
         <button on:click={() => toggleVisibility(char)}>{ char.getVisibility() ? "Verstecken" : "Anzeigen" }</button>
         <!--<button on:click={() => resetAllStats(char)}>Reset Stats</button>-->
         <button on:click={() => deleteCharacter(char)}>Löschen</button>
-        <button on:click={() => addSLCharacter(char)}>In SL übernehmen</button>
+        <button on:click={() => addGMCharacter(char)}>In SL übernehmen</button>
       </li>
     {/each}
 </ul>
@@ -22,7 +22,7 @@
 
 <script>
     import { characters, deleteCharacter, updateCharacter } from "./CharacterStore";
-    import { addSLCharacter } from "./SLStore";
+    import { addGMCharacter } from "./GMStore";
 
     function incrementStat(character, stat) {
         if(stat === "woundModifiers") {

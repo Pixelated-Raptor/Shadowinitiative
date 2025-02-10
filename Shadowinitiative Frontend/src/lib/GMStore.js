@@ -1,7 +1,7 @@
 import { writable } from "svelte/store";
 import { Character } from "./Character";
 
-const localStorageKey = "shadowinitiative_sl_characters";
+const localStorageKey = "shadowinitiative_gm_characters";
 
 function loadGMCharacters() {
     const storedCharacters = localStorage.getItem(localStorageKey);
@@ -32,6 +32,7 @@ export function addGMCharacter(character) {
     GMCharacters.update(currentCharacters => {
         const updatedCharacters = [...currentCharacters, character];
         saveGMCharacters(updatedCharacters);
+        console.log(updatedCharacters);
         return updatedCharacters;
     });
 }
