@@ -4,7 +4,7 @@
 </div>
 
 <hr>
-<p>Hier wird später die Tabelle stehen</p>
+<SLTable />
 <hr>
 
 <div class="Characters">
@@ -29,6 +29,7 @@
     import AddCharacterForm from "./AddCharacterForm.svelte";
     import ListAvailableCharacters from "./ListAvailableCharacters.svelte";
     import CSVComponent from "./CSVComponent.svelte";
+    import SLTable from "./SLTable.svelte";
 </script>
 
 
