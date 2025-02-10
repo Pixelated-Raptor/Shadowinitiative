@@ -1,15 +1,19 @@
+<!-- List available Characters and allow modification of their base(!) stats. -->
+
 <ul>
     {#each $characters as char}
       <li>
         Name: {char.getName()} |
         Ini: {char.getInitiative()} |
-        Ini-D: {char.getModdedInitiativePasses()} <button on:click={() => incrementStat(char, "moddedInitiativePasses")}>+Ini-D</button> <button on:click={() => decrementStat(char, "moddedInitiativePasses")}>-Ini-D</button> |
-        Reaktion: {char.getModdedReaction()} <button on:click={() => incrementStat(char, "moddedReaction")}>+Rea</button> <button on:click={() => decrementStat(char, "moddedReaction")}>-Rea</button> |
-        Intuition: {char.getModdedIntuition()} <button on:click={() => incrementStat(char, "moddedIntuition")}>+Int</button> <button on:click={() => decrementStat(char, "moddedIntuition")}>-Int</button> |
-        Wound Modifiers: {char.getWoundModifiers()} <button on:click={() => incrementStat(char, "woundModifiers")}>+Wound Mod.</button> <button on:click={() => decrementStat(char, "woundModifiers")}>-Wound Mod.</button>
+        Ini-D: <button on:click={() => incrementStat(char, "baseInitiativePasses")}>+</button> {char.getBaseInitiativePasses()} <button on:click={() => decrementStat(char, "baseInitiativePasses")}>-</button> |
+        Reaktion: <button on:click={() => incrementStat(char, "baseReaction")}>+</button> {char.getBaseReaction()} <button on:click={() => decrementStat(char, "baseReaction")}>-</button> |
+        Intuition: <button on:click={() => incrementStat(char, "baseIntuition")}>+</button> {char.getBaseIntuition()} <button on:click={() => decrementStat(char, "baseIntuition")}>-</button> |
+        Edge: <button on:click={() => incrementStat(char, "edge")}>+</button> {char.getEdge()} <button on:click={() => decrementStat(char, "edge")}>-</button> |
+        Wound Modifiers: <button on:click={() => incrementStat(char, "woundModifiers")}>+</button> {char.getWoundModifiers()} <button on:click={() => decrementStat(char, "woundModifiers")}>-</button> |
         <button on:click={() => toggleVisibility(char)}>{ char.getVisibility() ? "Verstecken" : "Anzeigen" }</button>
-        <button on:click={() => resetAllStats(char)}>Reset Stats</button>
+        <!--<button on:click={() => resetAllStats(char)}>Reset Stats</button>-->
         <button on:click={() => deleteCharacter(char)}>Löschen</button>
+        <button on:click={() => addSLCharacter(char)}>In SL übernehmen</button>
       </li>
     {/each}
 </ul>
@@ -18,6 +22,7 @@
 
 <script>
     import { characters, deleteCharacter, updateCharacter } from "./CharacterStore";
+    import { addSLCharacter } from "./SLStore";
 
     function incrementStat(character, stat) {
         if(stat === "woundModifiers") {
@@ -42,12 +47,12 @@
         updateCharacter(character, { isVisible: character.getVisibility() });
     }
 
-    function resetAllStats(character) {
+    /*function resetAllStats(character) {
         updateCharacter(character, {
             moddedReaction: character.getBaseReaction(),
             moddedIntuition: character.getBaseIntuition(),
             moddedInitiativePasses: character.getBaseInitiativePasses(),
             woundModifiers: 0
         });
-    }
+    }*/
 </script>
