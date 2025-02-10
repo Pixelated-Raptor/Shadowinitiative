@@ -29,12 +29,12 @@ export function exportToCSV(characters) {
 export function importFromCSV(file, callback) {
     const reader = new FileReader();
     reader.onload = function(event) {
-        const csvData = event.target.result;
-        const rows = csvData.split('\n').slice(1); // Skip header row
+        const csvData = event.target.result.toString();
+        const rows = csvData.split('\n').slice(1);
         const characters = rows.map(row => {
             const [name, reaction, intuition, initiativePasses, edge, woundModifiers] = row.split(',');
             return new Character(name, Number(reaction), Number(intuition), Number(initiativePasses), Number(edge), Number(woundModifiers));
-        }).filter(char => char.name); // Filter out empty rows
+        }).filter(char => char.name);
         callback(characters);
     };
     reader.readAsText(file);
