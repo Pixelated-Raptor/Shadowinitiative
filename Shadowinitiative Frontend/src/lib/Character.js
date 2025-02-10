@@ -3,13 +3,13 @@ export class Character {
         this.name = name;
 
         this.baseReaction = Number(reaction);
-        this.moddedReaction = Number(reaction);
+        this.moddedReaction = null;
 
         this.baseIntuition = Number(intuition);
-        this.moddedIntuition = Number(intuition);
+        this.moddedIntuition = null;
 
         this.baseInitiativePasses = Number(initiativePasses);
-        this.moddedInitiativePasses = Number(initiativePasses);
+        this.moddedInitiativePasses = null;
 
         this.edge = Number(edge);
 
@@ -20,9 +20,8 @@ export class Character {
 
     getName() {return this.name;}
 
-    getInitiative() {
-        return this.baseReaction + this.baseIntuition + this.woundModifiers;
-    }
+    getInitiative() {return this.baseReaction + this.baseIntuition + this.woundModifiers;}
+    getModdedInitiative() {return this.moddedReaction + this.moddedIntuition + this.woundModifiers;}
 
     getBaseInitiativePasses() {return this.baseInitiativePasses;}
     setBaseInitiativePasses(newInitiativePasses) {this.baseInitiativePasses = newInitiativePasses;}

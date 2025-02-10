@@ -29,6 +29,10 @@ GMCharacters.subscribe(value => {
 });
 
 export function addGMCharacter(character) {
+    character.setModdedInitiativePasses(character.getBaseInitiativePasses());
+    character.setModdedReaction(character.getBaseReaction());
+    character.setModdedIntuition(character.getBaseIntuition());
+
     GMCharacters.update(currentCharacters => {
         const updatedCharacters = [...currentCharacters, character];
         saveGMCharacters(updatedCharacters);

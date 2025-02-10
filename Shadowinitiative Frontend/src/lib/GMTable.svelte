@@ -15,10 +15,10 @@
     <thead>
         <tr>
             <th>Name</th>
-            <th>Ini</th>
+            <th>Ini.</th>
             <th>Ini-D</th>
-            <th>Reaktion</th>
-            <th>Intuition</th>
+            <th>Rea.</th>
+            <th>Int.</th>
             <th>Wound Modifiers</th>
             <th>Initiative</th>
             <th>Aktionen</th>
