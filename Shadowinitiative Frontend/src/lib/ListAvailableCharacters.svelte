@@ -10,8 +10,6 @@
         Intuition: <button on:click={() => incrementStat(char, "baseIntuition")}>+</button> {char.getBaseIntuition()} <button on:click={() => decrementStat(char, "baseIntuition")}>-</button> |
         Edge: <button on:click={() => incrementStat(char, "edge")}>+</button> {char.getEdge()} <button on:click={() => decrementStat(char, "edge")}>-</button> |
         Wound Modifiers: <button on:click={() => incrementStat(char, "woundModifiers")}>+</button> {char.getWoundModifiers()} <button on:click={() => decrementStat(char, "woundModifiers")}>-</button> |
-        <button on:click={() => toggleVisibility(char)}>{ char.getVisibility() ? "Verstecken" : "Anzeigen" }</button>
-        <!--<button on:click={() => resetAllStats(char)}>Reset Stats</button>-->
         <button on:click={() => deleteCharacter(char)}>Löschen</button>
         <button on:click={() => addGMCharacter(char)}>In SL übernehmen</button>
       </li>
@@ -40,11 +38,6 @@
         } else if(character[stat] - 1 >= 0) {
             updateCharacter(character, { [stat] : character[stat] - 1 });
         }
-    }
-
-    function toggleVisibility(character) {
-        character.toggleVisibility();
-        updateCharacter(character, { isVisible: character.getVisibility() });
     }
 
     /*function resetAllStats(character) {
