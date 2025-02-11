@@ -11,6 +11,8 @@ export class Character {
         this.baseInitiativePasses = Number(initiativePasses);
         this.moddedInitiativePasses = null;
 
+        this.initiativeResult = null;
+
         this.edge = Number(edge);
 
         this.woundModifiers = Number(woundModifiers);
@@ -20,8 +22,8 @@ export class Character {
 
     getName() {return this.name;}
 
-    getInitiative() {return this.baseReaction + this.baseIntuition + this.woundModifiers;}
-    getModdedInitiative() {return this.moddedReaction + this.moddedIntuition + this.woundModifiers;}
+    getInitiative() {return this.baseReaction + this.baseIntuition;}
+    getModdedInitiative() {return this.moddedReaction + this.moddedIntuition;}
 
     getBaseInitiativePasses() {return this.baseInitiativePasses;}
     setBaseInitiativePasses(newInitiativePasses) {this.baseInitiativePasses = newInitiativePasses;}
@@ -41,6 +43,9 @@ export class Character {
     getModdedIntuition() {return this.moddedIntuition;}
     setModdedIntuition(newIntuition) {this.moddedIntuition = newIntuition;}
 
+    getInitiativeResult() {return this.initiativeResult;}
+    setInitiativeResult(newResult) {this.initiativeResult = newResult;}
+
     getEdge() {return this.edge;}
     setEdge(newEdge) {this.edge = newEdge;}
 
@@ -48,5 +53,4 @@ export class Character {
     setWoundModifiers(newWoundModifiers) {this.woundModifiers = newWoundModifiers;}
 
     getVisibility() {return this.isVisible;}
-    toggleVisibility() {this.isVisible = !this.isVisible;}
 }
