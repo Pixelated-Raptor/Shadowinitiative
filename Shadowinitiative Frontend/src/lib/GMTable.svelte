@@ -143,6 +143,7 @@
                 updatedActions[pass] = [...(updatedActions[pass] || []), "fertig"];
                 updateCombatCharacter(char, { actions: updatedActions });
             });
+            checkPassCompletion();
         } else {
             // Falls keine eligible Charaktere mehr im aktuellen Durchgang, prüfe, ob der nächste Durchgang existiert.
             let nextPass = pass + 1;
@@ -210,6 +211,26 @@
         const previous = character.actions[pass] || [];
         const newActions = [ ...previous, actionType ];
         updateCombatCharacter(character, { actions: { ...character.actions, [pass]: newActions } });
+        checkPassCompletion();
+    }
+
+    // Prüft, ob im aktuellen Durchgang noch eligible Charaktere vorhanden sind.
+    // Wenn nicht, wird in den nächsten INI-Durchgang gewechselt oder die Kampfrunde beendet.
+    function checkPassCompletion() {
+        const pass = get(currentIniPass);
+        const eligible = get(combatCharacters).filter(char =>
+            char.getModdedInitiativePasses() >= pass &&
+            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig"))
+        );
+        if (eligible.length === 0) {
+            let nextPass = pass + 1;
+            const eligiblePass = get(combatCharacters).some(char => char.getModdedInitiativePasses() >= nextPass);
+            if (eligiblePass) {
+                currentIniPass.set(nextPass);
+            } else {
+                nextBattleround();
+            }
+        }
     }
 
     // Ein Charakter gilt als aktiv, wenn er in diesem Durchgang noch nicht als "fertig" markiert ist
