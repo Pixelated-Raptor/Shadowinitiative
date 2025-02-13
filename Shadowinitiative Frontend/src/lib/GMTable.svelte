@@ -9,11 +9,12 @@
                 <th>INI-D: 2</th>
                 <th>INI-D: 3</th>
                 <th>INI-D: 4</th>
+                <th>Ausgeführte Handlung?</th>
             </tr>
         </thead>
         <tbody>
             {#each $combatCharacters.sort((a, b) => b.initiative - a.initiative) as char}
-            <tr>
+            <tr class:active={isCharacterActive(char)}>
                 <td>
                     {char.getName()} |
                     Reaktion: <button on:click={() => incrementStat(char, "moddedReaction")}>+</button> {char.getModdedReaction()} <button on:click={() => decrementStat(char, "moddedReaction")}>-</button> |
@@ -23,16 +24,28 @@
                 </td>
                 <td>{char.initiative}</td>
                 <td><input type="checkbox" checked={char.getVisibility()} on:change={() => toggleVisibility(char)} /></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-            </tr>
+                {#each [1,2,3,4] as pass}
+                <td>
+                    {#if pass === $currentIniPass && isCharacterActive(char)}
+                        <!-- Nur im aktuellen Durchgang werden die Aktionsknöpfe angezeigt -->
+                        <button on:click={() => recordAction(char, pass, 'Frei')}>Frei</button>
+                        <button on:click={() => recordAction(char, pass, 'Einfach')}>Einfach</button>
+                        <button on:click={() => recordAction(char, pass, 'Komplex')}>Komplex</button>
+                        {#if char.actions && char.actions[pass]}
+                            <div>{char.actions[pass].join(", ")}</div>
+                        {/if}
+                    {:else if char.actions && char.actions[pass]}
+                        <div>{char.actions[pass].join(", ")}</div>
+                    {/if}
+                        </td>
+                    {/each}
+                </tr>
             {/each}
         </tbody>
     </table>
     <button on:click={endCombat}>Kampf beenden</button>
     <button on:click={nextBattleround}>Nächste Kampfrunde</button>
+    <button on:click={nextCharacter}>Nächster Charakter</button>
 {:else}
     <table>
         <thead>
@@ -70,17 +83,33 @@
 {/if}
 
 
+
+<style>
+    .active {
+        background-color: #fdd;
+    }
+</style>
+
+
+
 <script>
     import { GMCharacters, updateGMCharacter, removeGMCharacter } from "./GMStore";
-    import { writable } from "svelte/store";
+    import { writable, get } from "svelte/store";
 
     let isCombatMode = writable(false);
     let combatCharacters = writable([]);
+    let currentIniPass = writable(1);
 
+    // Startet den Kampf und initialisiert für jeden Charakter ein "actions"-Objekt
     function startCombat() {
-        if($GMCharacters.length !== 0) {
-            combatCharacters.set($GMCharacters);
+        if (get(GMCharacters).length !== 0) {
+            const combatChars = get(GMCharacters).map(char => {
+                char.actions = {}; // initialisieren
+                return char;
+            });
+            combatCharacters.set(combatChars);
             isCombatMode.set(true);
+            currentIniPass.set(1);
         }
     }
 
@@ -93,6 +122,37 @@
     function nextBattleround() {
         combatCharacters.set([]);
         isCombatMode.set(false);
+    }
+
+    // Markiert alle aktiven Charaktere (die aktuell die höchste Initiative im aktuellen Durchgang haben) als "fertig"
+    function nextCharacter() {
+        const pass = get(currentIniPass);
+        // Alle Charaktere, die im aktuellen Durchgang noch nicht fertig sind und ausreichend INI-D haben:
+        const eligible = get(combatCharacters).filter(char =>
+            char.getModdedInitiativePasses() >= pass &&
+            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig"))
+        );
+        if (eligible.length > 0) {
+            // Ermittle den höchsten Initiativewert unter den eligible Charakteren.
+            const maxInitiative = Math.max(...eligible.map(c => c.initiative));
+            // Wähle alle Charaktere mit diesem Initiativwert als aktive Gruppe.
+            const activeGroup = eligible.filter(c => c.initiative === maxInitiative);
+            // Markiere alle aktiven Charaktere als fertig.
+            activeGroup.forEach(char => {
+                const updatedActions = { ...char.actions };
+                updatedActions[pass] = [...(updatedActions[pass] || []), "fertig"];
+                updateCombatCharacter(char, { actions: updatedActions });
+            });
+        } else {
+            // Falls keine eligible Charaktere mehr im aktuellen Durchgang, prüfe, ob der nächste Durchgang existiert.
+            let nextPass = pass + 1;
+            const eligiblePass = get(combatCharacters).some(char => char.getModdedInitiativePasses() >= nextPass);
+            if (eligiblePass) {
+                currentIniPass.set(nextPass);
+            } else {
+                nextBattleround();
+            }
+        }
     }
 
     function updateInitiative(character, event) {
@@ -142,5 +202,29 @@
             }
             return chars;
         });
+    }
+
+    // Speichert die ausgewählte Aktion (Frei, Einfach, Komplex) 
+    // Hier sammeln wir einfach alle Aktionen in einem Array für den aktuellen INI-Durchgang.
+    function recordAction(character, pass, actionType) {
+        const previous = character.actions[pass] || [];
+        const newActions = [ ...previous, actionType ];
+        updateCombatCharacter(character, { actions: { ...character.actions, [pass]: newActions } });
+    }
+
+    // Ein Charakter gilt als aktiv, wenn er in diesem Durchgang noch nicht als "fertig" markiert ist
+    // UND seinen Initiativewert gleich dem Maximum unter den eligible Charakteren hat.
+    function isCharacterActive(char) {
+        const pass = get(currentIniPass);
+        if (char.getModdedInitiativePasses() < pass) return false;
+        const done = char.actions && char.actions[pass] && char.actions[pass].includes("fertig");
+        if (done) return false;
+        const eligible = get(combatCharacters).filter(c =>
+            c.getModdedInitiativePasses() >= pass &&
+            !(c.actions && c.actions[pass] && c.actions[pass].includes("fertig"))
+        );
+        if (eligible.length === 0) return false;
+        const maxInitiative = Math.max(...eligible.map(c => c.initiative));
+        return char.initiative === maxInitiative;
     }
 </script>
