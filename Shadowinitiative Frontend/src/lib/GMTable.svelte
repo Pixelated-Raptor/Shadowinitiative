@@ -12,7 +12,7 @@
             </tr>
         </thead>
         <tbody>
-            {#each $combatCharacters.sort((a, b) => b.initiative - a.initiative) as char}
+            {#each $combatCharacters.sort((a, b) => getEffectiveInitiative(b) - getEffectiveInitiative(a)) as char}
             <tr class:active={isCharacterActive(char)}>
                 <td>
                     {char.getName()} |
@@ -21,7 +21,7 @@
                     Ini-D: <button on:click={() => incrementStat(char, "moddedInitiativePasses")}>+</button> {char.getModdedInitiativePasses()} <button on:click={() => decrementStat(char, "moddedInitiativePasses")}>-</button> |
                     Wound Modifiers: <button on:click={() => incrementStat(char, "woundModifiers")}>+</button> {char.getWoundModifiers()} <button on:click={() => decrementStat(char, "woundModifiers")}>-</button>
                 </td>
-                <td>{char.initiative}</td>
+                <td>{getEffectiveInitiative(char)}</td>
                 <td><input type="checkbox" checked={char.getVisibility()} on:change={() => toggleVisibility(char)} /></td>
                 {#each [1,2,3,4] as pass}
                 <td>
@@ -55,7 +55,7 @@
                 <th>Reaktion</th>
                 <th>Intuition</th>
                 <th>Wound Modifiers</th>
-                <th>Initiativeergebnis</th>
+                <th>Erfolge Initiativeergebnis</th>
                 <th>Sichtbar in PC-Tabelle?</th>
                 <th>Aktionen</th>
             </tr>
@@ -70,7 +70,7 @@
                 <td>{char.getModdedIntuition()}</td>
                 <td>{char.getWoundModifiers()}</td>
                 <td>
-                    <input type="number" value={char.initiative} on:input={(event) => updateInitiative(char, event)}/>
+                    <input type="number" value={char.initiativeSuccesses || 0} on:input={(event) => updateInitiativeSuccesses(char, event)}/>
                 </td>
                 <td><input type="checkbox" on:change={() => toggleVisibility(char)} checked={char.getVisibility()}/></td>
                 <td><button on:click={() => removeFromGMTable(char)}>Aus Kampf entfernen</button></td>
@@ -99,6 +99,21 @@
     let combatCharacters = writable([]);
     let currentIniPass = writable(1);
 
+    // Helper: Berechnet den effektiven Initiativewert dynamisch:
+    // (Reaktion + Intuition) + Initiative-Erfolge + Wound Modifier.
+    function getEffectiveInitiative(char) {
+        const baseIni = char.getModdedReaction() + char.getModdedIntuition();
+        const successes = char.initiativeSuccesses || 0;
+        return baseIni + successes + char.getWoundModifiers();
+    }
+
+    // Aktualisiert die Initiative-Erfolge (bei der Initiativeprobe) und speichert den Wert.
+    function updateInitiativeSuccesses(character, event) {
+        const newSuccesses = parseInt(event.target.value, 10);
+        updateGMCharacter(character, { initiativeSuccesses: newSuccesses });
+        updateCombatCharacter(character, { initiativeSuccesses: newSuccesses });
+    }
+
     // Startet den Kampf und initialisiert für jeden Charakter ein "actions"-Objekt
     function startCombat() {
         if (get(GMCharacters).length !== 0) {
@@ -123,20 +138,17 @@
         isCombatMode.set(false);
     }
 
-    // Markiert alle aktiven Charaktere (die aktuell die höchste Initiative im aktuellen Durchgang haben) als "fertig"
+    // Markiert alle aktiven Charaktere im aktuellen Durchgang (mit höchstem effektivem INI-Ergebnis) als "fertig"
     function nextCharacter() {
         const pass = get(currentIniPass);
-        // Alle Charaktere, die im aktuellen Durchgang noch nicht fertig sind und ausreichend INI-D haben:
         const eligible = get(combatCharacters).filter(char =>
             char.getModdedInitiativePasses() >= pass &&
+            getEffectiveInitiative(char) > 0 &&
             !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig"))
         );
         if (eligible.length > 0) {
-            // Ermittle den höchsten Initiativewert unter den eligible Charakteren.
-            const maxInitiative = Math.max(...eligible.map(c => c.initiative));
-            // Wähle alle Charaktere mit diesem Initiativwert als aktive Gruppe.
-            const activeGroup = eligible.filter(c => c.initiative === maxInitiative);
-            // Markiere alle aktiven Charaktere als fertig.
+            const maxEffective = Math.max(...eligible.map(c => getEffectiveInitiative(c)));
+            const activeGroup = eligible.filter(c => getEffectiveInitiative(c) === maxEffective);
             activeGroup.forEach(char => {
                 const updatedActions = { ...char.actions };
                 updatedActions[pass] = [...(updatedActions[pass] || []), "fertig"];
@@ -144,9 +156,28 @@
             });
             checkPassCompletion();
         } else {
-            // Falls keine eligible Charaktere mehr im aktuellen Durchgang, prüfe, ob der nächste Durchgang existiert.
             let nextPass = pass + 1;
-            const eligiblePass = get(combatCharacters).some(char => char.getModdedInitiativePasses() >= nextPass);
+            const eligiblePass = get(combatCharacters).some(char =>
+                char.getModdedInitiativePasses() >= nextPass && getEffectiveInitiative(char) > 0);
+            if (eligiblePass) {
+                currentIniPass.set(nextPass);
+            } else {
+                nextBattleround();
+            }
+        }
+    }
+
+    function checkPassCompletion() {
+        const pass = get(currentIniPass);
+        const eligible = get(combatCharacters).filter(char =>
+            char.getModdedInitiativePasses() >= pass &&
+            getEffectiveInitiative(char) > 0 &&
+            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig"))
+        );
+        if (eligible.length === 0) {
+            let nextPass = pass + 1;
+            const eligiblePass = get(combatCharacters).some(char =>
+                char.getModdedInitiativePasses() >= nextPass && getEffectiveInitiative(char) > 0);
             if (eligiblePass) {
                 currentIniPass.set(nextPass);
             } else {
@@ -213,38 +244,24 @@
         checkPassCompletion();
     }
 
-    // Prüft, ob im aktuellen Durchgang noch eligible Charaktere vorhanden sind.
-    // Wenn nicht, wird in den nächsten INI-Durchgang gewechselt oder die Kampfrunde beendet.
-    function checkPassCompletion() {
-        const pass = get(currentIniPass);
-        const eligible = get(combatCharacters).filter(char =>
-            char.getModdedInitiativePasses() >= pass &&
-            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig"))
-        );
-        if (eligible.length === 0) {
-            let nextPass = pass + 1;
-            const eligiblePass = get(combatCharacters).some(char => char.getModdedInitiativePasses() >= nextPass);
-            if (eligiblePass) {
-                currentIniPass.set(nextPass);
-            } else {
-                nextBattleround();
-            }
-        }
-    }
-
-    // Ein Charakter gilt als aktiv, wenn er in diesem Durchgang noch nicht als "fertig" markiert ist
-    // UND seinen Initiativewert gleich dem Maximum unter den eligible Charakteren hat.
+    // Ein Charakter gilt als aktiv, wenn:
+    // - er im aktuellen Durchgang teilnehmen kann,
+    // - sein effektives Initiativeergebnis > 0 ist,
+    // - noch nicht als "fertig" markiert wurde und
+    // - sein effektives INI-Ergebnis dem Maximum unter den eligible Charakteren entspricht.
     function isCharacterActive(char) {
         const pass = get(currentIniPass);
         if (char.getModdedInitiativePasses() < pass) return false;
+        if (getEffectiveInitiative(char) <= 0) return false;
         const done = char.actions && char.actions[pass] && char.actions[pass].includes("fertig");
         if (done) return false;
         const eligible = get(combatCharacters).filter(c =>
             c.getModdedInitiativePasses() >= pass &&
+            getEffectiveInitiative(c) > 0 &&
             !(c.actions && c.actions[pass] && c.actions[pass].includes("fertig"))
         );
         if (eligible.length === 0) return false;
-        const maxInitiative = Math.max(...eligible.map(c => c.initiative));
-        return char.initiative === maxInitiative;
+        const maxEffective = Math.max(...eligible.map(c => getEffectiveInitiative(c)));
+        return getEffectiveInitiative(char) === maxEffective;
     }
 </script>
