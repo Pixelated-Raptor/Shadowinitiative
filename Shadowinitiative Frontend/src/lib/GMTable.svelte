@@ -9,7 +9,6 @@
                 <th>INI-D: 2</th>
                 <th>INI-D: 3</th>
                 <th>INI-D: 4</th>
-                <th>Ausgeführte Handlung?</th>
             </tr>
         </thead>
         <tbody>
@@ -177,11 +176,11 @@
         if(stat === "woundModifiers") {
             if(character[stat] < 0) {
                 updateGMCharacter(character, { [stat] : character[stat] + 1 });
-                updateCombatCharacter(character, { [stat] : character[stat] - 1 });
+                updateCombatCharacter(character, { [stat] : character[stat] + 1 });
             }
         } else {
             updateGMCharacter(character, { [stat] : character[stat] + 1 });
-            updateCombatCharacter(character, { [stat] : character[stat] - 1 });
+            updateCombatCharacter(character, { [stat] : character[stat] + 1 });
         }
     }
 
