@@ -25,20 +25,26 @@
                 <td><input type="checkbox" checked={char.getVisibility()} on:change={() => toggleVisibility(char)} /></td>
                 {#each [1,2,3,4] as pass}
                 <td>
-                    {#if pass === $currentIniPass && isCharacterActive(char)}
-                        <!-- Nur im aktuellen Durchgang werden die Aktionsknöpfe angezeigt -->
-                        <button on:click={() => recordAction(char, pass, 'Frei')}>Frei</button>
-                        <button on:click={() => recordAction(char, pass, 'Einfach')}>Einfach</button>
-                        <button on:click={() => recordAction(char, pass, 'Komplex')}>Komplex</button>
+                    {#if pass === $currentIniPass}
+                        {#if isCharacterActive(char)}
+                            <!-- Normale Aktionsbuttons -->
+                            <button on:click={() => recordAction(char, pass, 'Frei')}>Frei</button>
+                            <button on:click={() => recordAction(char, pass, 'Einfach')}>Einfach</button>
+                            <button on:click={() => recordAction(char, pass, 'Komplex')}>Komplex</button>
+                            <button on:click={() => delayAction(char, pass)}>Verzögern</button>
+                        {:else if char.delayed}
+                            <!-- Für verzögerte Charaktere: Möglichkeit, nun sofort zu handeln -->
+                            <button on:click={() => activateDelayed(char, pass)}>Jetzt handeln</button>
+                        {/if}
                         {#if char.actions && char.actions[pass]}
                             <div>{char.actions[pass].join(", ")}</div>
                         {/if}
                     {:else if char.actions && char.actions[pass]}
                         <div>{char.actions[pass].join(", ")}</div>
                     {/if}
-                        </td>
-                    {/each}
-                </tr>
+                </td>
+                {/each}
+            </tr>
             {/each}
         </tbody>
     </table>
@@ -114,11 +120,12 @@
         updateCombatCharacter(character, { initiativeSuccesses: newSuccesses });
     }
 
-    // Startet den Kampf und initialisiert für jeden Charakter ein "actions"-Objekt
+    // Startet den Kampf und initialisiert für jeden Charakter ein "actions"-Objekt sowie delayed.
     function startCombat() {
         if (get(GMCharacters).length !== 0) {
             const combatChars = get(GMCharacters).map(char => {
                 char.actions = {}; // initialisieren
+                char.delayed = false; // verzögerungs-Flag initialisieren
                 return char;
             });
             combatCharacters.set(combatChars);
@@ -138,18 +145,32 @@
         isCombatMode.set(false);
     }
 
+    // Verzögert die Aktion eines Charakters, d.h. löscht bereits eingetragene Aktionen
+    // für den aktuellen INI-Durchgang, setzt den Flag "delayed" und ruft checkPassCompletion()
+    // auf.
+    function delayAction(character, pass) {
+        // Lösche alle im aktuellen Durchgang bereits eingetragenen Aktionen
+        const updatedActions = { ...character.actions, [pass]: [] };
+        updateCombatCharacter(character, { actions: updatedActions, delayed: true });
+        updateGMCharacter(character, { actions: updatedActions, delayed: true });
+        checkPassCompletion();
+    }
+
     // Markiert alle aktiven Charaktere im aktuellen Durchgang (mit höchstem effektivem INI-Ergebnis) als "fertig"
     function nextCharacter() {
         const pass = get(currentIniPass);
-        const eligible = get(combatCharacters).filter(char =>
+        // Nur Charaktere berücksichtigen, die nicht verzögert haben und noch nicht "fertig" sind.
+        const nonDelayedEligible = get(combatCharacters).filter(char =>
             char.getModdedInitiativePasses() >= pass &&
             getEffectiveInitiative(char) > 0 &&
-            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig"))
+            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig")) &&
+            !char.delayed
         );
-        if (eligible.length > 0) {
-            const maxEffective = Math.max(...eligible.map(c => getEffectiveInitiative(c)));
-            const activeGroup = eligible.filter(c => getEffectiveInitiative(c) === maxEffective);
+        if (nonDelayedEligible.length > 0) {
+            const maxEffective = Math.max(...nonDelayedEligible.map(c => getEffectiveInitiative(c)));
+            const activeGroup = nonDelayedEligible.filter(c => getEffectiveInitiative(c) === maxEffective);
             activeGroup.forEach(char => {
+                // Markiere diese Charaktere als "fertig"
                 const updatedActions = { ...char.actions };
                 updatedActions[pass] = [...(updatedActions[pass] || []), "fertig"];
                 updateCombatCharacter(char, { actions: updatedActions });
@@ -158,7 +179,9 @@
         } else {
             let nextPass = pass + 1;
             const eligiblePass = get(combatCharacters).some(char =>
-                char.getModdedInitiativePasses() >= nextPass && getEffectiveInitiative(char) > 0);
+                char.getModdedInitiativePasses() >= nextPass &&
+                getEffectiveInitiative(char) > 0
+            );
             if (eligiblePass) {
                 currentIniPass.set(nextPass);
             } else {
@@ -172,12 +195,15 @@
         const eligible = get(combatCharacters).filter(char =>
             char.getModdedInitiativePasses() >= pass &&
             getEffectiveInitiative(char) > 0 &&
+            !char.delayed &&
             !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig"))
         );
         if (eligible.length === 0) {
             let nextPass = pass + 1;
             const eligiblePass = get(combatCharacters).some(char =>
-                char.getModdedInitiativePasses() >= nextPass && getEffectiveInitiative(char) > 0);
+                char.getModdedInitiativePasses() >= nextPass &&
+                getEffectiveInitiative(char) > 0
+            );
             if (eligiblePass) {
                 currentIniPass.set(nextPass);
             } else {
@@ -241,6 +267,10 @@
         const previous = character.actions[pass] || [];
         const newActions = [ ...previous, actionType ];
         updateCombatCharacter(character, { actions: { ...character.actions, [pass]: newActions } });
+        if (character.delayed) {
+            updateCombatCharacter(character, { delayed: false });
+            updateGMCharacter(character, { delayed: false });
+        }
         checkPassCompletion();
     }
 
@@ -255,13 +285,24 @@
         if (getEffectiveInitiative(char) <= 0) return false;
         const done = char.actions && char.actions[pass] && char.actions[pass].includes("fertig");
         if (done) return false;
+        // Hier werden nur Charaktere berücksichtigt, die NICHT verzögert haben:
         const eligible = get(combatCharacters).filter(c =>
             c.getModdedInitiativePasses() >= pass &&
             getEffectiveInitiative(c) > 0 &&
-            !(c.actions && c.actions[pass] && c.actions[pass].includes("fertig"))
+            !(c.actions && c.actions[pass] && c.actions[pass].includes("fertig")) &&
+            !c.delayed
         );
         if (eligible.length === 0) return false;
         const maxEffective = Math.max(...eligible.map(c => getEffectiveInitiative(c)));
-        return getEffectiveInitiative(char) === maxEffective;
+        const active = getEffectiveInitiative(char) === maxEffective;
+        return active;
+    }
+
+    // Zusätzliche Funktion, die einen verzögerten Charakter sofort aktiviert.
+    function activateDelayed(character, pass) {
+        updateCombatCharacter(character, { delayed: false });
+        updateGMCharacter(character, { delayed: false });
+        // Um den Charakter aktiv zu machen, kann checkPassCompletion() aufgerufen werden.
+        checkPassCompletion();
     }
 </script>
