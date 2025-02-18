@@ -34,9 +34,13 @@ export function addGMCharacter(character) {
     character.setModdedIntuition(character.getBaseIntuition());
 
     GMCharacters.update(currentCharacters => {
+        // Prüfe anhand des Namens, ob der Charakter bereits existiert.
+        if (currentCharacters.some(char => char.getName() === character.getName())) {
+            // Bereits vorhanden – nichts hinzufügen.
+            return currentCharacters;
+        }
         const updatedCharacters = [...currentCharacters, character];
         saveGMCharacters(updatedCharacters);
-        console.log(updatedCharacters);
         return updatedCharacters;
     });
 }
