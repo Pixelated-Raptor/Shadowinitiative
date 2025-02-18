@@ -9,11 +9,12 @@
                 <th>INI-D: 2</th>
                 <th>INI-D: 3</th>
                 <th>INI-D: 4</th>
+                <th>KO</th>  <!-- Neue Spalte -->
             </tr>
         </thead>
         <tbody>
             {#each $combatCharacters.sort((a, b) => getEffectiveInitiative(b) - getEffectiveInitiative(a)) as char}
-            <tr class:active={isCharacterActive(char)}>
+            <tr class:active={isCharacterActive(char)} class:ko={char.ko}>
                 <td>
                     {char.getName()} |
                     Reaktion: <button on:click={() => incrementStat(char, "moddedReaction")}>+</button> {char.getModdedReaction()} <button on:click={() => decrementStat(char, "moddedReaction")}>-</button> |
@@ -22,28 +23,38 @@
                     Wound Modifiers: <button on:click={() => incrementStat(char, "woundModifiers")}>+</button> {char.getWoundModifiers()} <button on:click={() => decrementStat(char, "woundModifiers")}>-</button>
                 </td>
                 <td>{getEffectiveInitiative(char)}</td>
-                <td><input type="checkbox" checked={char.getVisibility()} on:change={() => toggleVisibility(char)} /></td>
+                <td>
+                    <input type="checkbox" checked={char.getVisibility()} on:change={() => toggleVisibility(char)} />
+                </td>
                 {#each [1,2,3,4] as pass}
                 <td>
                     {#if pass === $currentIniPass}
-                        {#if isCharacterActive(char)}
-                            <!-- Normale Aktionsbuttons -->
-                            <button on:click={() => recordAction(char, pass, 'Frei')}>Frei</button>
-                            <button on:click={() => recordAction(char, pass, 'Einfach')}>Einfach</button>
-                            <button on:click={() => recordAction(char, pass, 'Komplex')}>Komplex</button>
-                            <button on:click={() => delayAction(char, pass)}>Verzögern</button>
-                        {:else if char.delayed}
-                            <!-- Für verzögerte Charaktere: Möglichkeit, nun sofort zu handeln -->
-                            <button on:click={() => activateDelayed(char, pass)}>Jetzt handeln</button>
-                        {/if}
-                        {#if char.actions && char.actions[pass]}
-                            <div>{char.actions[pass].join(", ")}</div>
-                        {/if}
+                    {#if isCharacterActive(char)}
+                    <!-- Normale Aktionsbuttons -->
+                    <button on:click={() => recordAction(char, pass, 'Frei')}>Frei</button>
+                    <button on:click={() => recordAction(char, pass, 'Einfach')}>Einfach</button>
+                    <button on:click={() => recordAction(char, pass, 'Komplex')}>Komplex</button>
+                    <button on:click={() => delayAction(char, pass)}>Verzögern</button>
+                    {:else if char.delayed}
+                    <!-- Für verzögerte Charaktere: Möglichkeit, nun sofort zu handeln -->
+                    <button on:click={() => activateDelayed(char, pass)}>Jetzt handeln</button>
+                    {/if}
+                    {#if char.actions && char.actions[pass]}
+                    <div>{char.actions[pass].join(", ")}</div>
+                    {/if}
                     {:else if char.actions && char.actions[pass]}
-                        <div>{char.actions[pass].join(", ")}</div>
+                    <div>{char.actions[pass].join(", ")}</div>
                     {/if}
                 </td>
                 {/each}
+                <!-- Neue Spalte KO -->
+                <td>
+                    {#if char.ko}
+                        <button on:click={() => toggleKO(char)}>Bereit</button>
+                    {:else}
+                        <button on:click={() => toggleKO(char)}>K.O.</button>
+                    {/if}
+                </td>
             </tr>
             {/each}
         </tbody>
@@ -52,6 +63,7 @@
     <button on:click={nextBattleround}>Nächste Kampfrunde</button>
     <button on:click={nextCharacter}>Nächster Charakter</button>
 {:else}
+    <!-- GM-Tabelle ohne KO-Spalte -->
     <table>
         <thead>
             <tr>
@@ -68,7 +80,7 @@
         </thead>
         <tbody>
             {#each $GMCharacters as char}
-            <tr>
+            <tr class:ko={char.ko}>
                 <td>{char.getName()}</td>
                 <td>{char.getInitiative()}</td>
                 <td>{char.getModdedInitiativePasses()}</td>
@@ -78,7 +90,9 @@
                 <td>
                     <input type="number" value={char.initiativeSuccesses || 0} on:input={(event) => updateInitiativeSuccesses(char, event)}/>
                 </td>
-                <td><input type="checkbox" on:change={() => toggleVisibility(char)} checked={char.getVisibility()}/></td>
+                <td>
+                    <input type="checkbox" on:change={() => toggleVisibility(char)} checked={char.getVisibility()}/>
+                </td>
                 <td><button on:click={() => removeFromGMTable(char)}>Aus Kampf entfernen</button></td>
             </tr>
             {/each}
@@ -87,15 +101,15 @@
     <button on:click={startCombat}>Kampf starten</button>
 {/if}
 
-
-
 <style>
     .active {
         background-color: #fdd;
     }
+    /* .ko-Klasse streicht den Zeilentext durch */
+    .ko {
+        text-decoration: line-through;
+    }
 </style>
-
-
 
 <script>
     import { GMCharacters, updateGMCharacter, removeGMCharacter } from "./GMStore";
@@ -164,7 +178,8 @@
             char.getModdedInitiativePasses() >= pass &&
             getEffectiveInitiative(char) > 0 &&
             !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig")) &&
-            !char.delayed
+            !char.delayed &&
+            !char.ko
         );
         if (nonDelayedEligible.length > 0) {
             const maxEffective = Math.max(...nonDelayedEligible.map(c => getEffectiveInitiative(c)));
@@ -180,7 +195,8 @@
             let nextPass = pass + 1;
             const eligiblePass = get(combatCharacters).some(char =>
                 char.getModdedInitiativePasses() >= nextPass &&
-                getEffectiveInitiative(char) > 0
+                getEffectiveInitiative(char) > 0 &&
+                !char.ko
             );
             if (eligiblePass) {
                 currentIniPass.set(nextPass);
@@ -196,13 +212,15 @@
             char.getModdedInitiativePasses() >= pass &&
             getEffectiveInitiative(char) > 0 &&
             !char.delayed &&
-            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig"))
+            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig")) &&
+            !char.ko
         );
         if (eligible.length === 0) {
             let nextPass = pass + 1;
             const eligiblePass = get(combatCharacters).some(char =>
                 char.getModdedInitiativePasses() >= nextPass &&
-                getEffectiveInitiative(char) > 0
+                getEffectiveInitiative(char) > 0 &&
+                !char.ko
             );
             if (eligiblePass) {
                 currentIniPass.set(nextPass);
@@ -281,6 +299,7 @@
     // - sein effektives INI-Ergebnis dem Maximum unter den eligible Charakteren entspricht.
     function isCharacterActive(char) {
         const pass = get(currentIniPass);
+        if (char.ko) return false; // KO-Charaktere sind nicht aktiv.
         if (char.getModdedInitiativePasses() < pass) return false;
         if (getEffectiveInitiative(char) <= 0) return false;
         const done = char.actions && char.actions[pass] && char.actions[pass].includes("fertig");
@@ -290,7 +309,8 @@
             c.getModdedInitiativePasses() >= pass &&
             getEffectiveInitiative(c) > 0 &&
             !(c.actions && c.actions[pass] && c.actions[pass].includes("fertig")) &&
-            !c.delayed
+            !c.delayed &&
+            !c.ko
         );
         if (eligible.length === 0) return false;
         const maxEffective = Math.max(...eligible.map(c => getEffectiveInitiative(c)));
@@ -304,5 +324,12 @@
         updateGMCharacter(character, { delayed: false });
         // Um den Charakter aktiv zu machen, kann checkPassCompletion() aufgerufen werden.
         checkPassCompletion();
+    }
+
+    // Neue Funktion zum Umschalten des KO-Status:
+    function toggleKO(character) {
+        const newState = !character.ko;
+        updateGMCharacter(character, { ko: newState });
+        updateCombatCharacter(character, { ko: newState });
     }
 </script>
