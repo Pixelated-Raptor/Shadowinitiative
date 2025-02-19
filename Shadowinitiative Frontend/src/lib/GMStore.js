@@ -55,12 +55,18 @@ export function removeGMCharacter(character) {
 
 export function updateGMCharacter(character, updates) {
     GMCharacters.update(currentCharacters => {
-        const index = currentCharacters.indexOf(character);
-        if (index !== -1) {
-            const updatedCharacter = Object.assign(Object.create(Object.getPrototypeOf(character)), character, updates);
-            currentCharacters[index] = updatedCharacter;
-            saveGMCharacters(currentCharacters);
-        }
-        return currentCharacters;
+        const updatedCharacters = currentCharacters.map(char => {
+            if (char.getName() === character.getName()) {
+                // Erzeuge einen neuen Charakter, wobei der Prototyp beibehalten wird
+                return Object.assign(
+                    Object.create(Object.getPrototypeOf(char)),
+                    char,
+                    updates
+                );
+            }
+            return char;
+        });
+        saveGMCharacters(updatedCharacters);
+        return updatedCharacters;
     });
 }
