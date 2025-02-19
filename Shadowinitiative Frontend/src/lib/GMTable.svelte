@@ -17,16 +17,25 @@
             <tr class:active={isCharacterActive(char)} class:ko={char.ko}>
                 <td>
                     {char.getName()} |
-                    Reaktion: <button on:click={() => incrementStat(char, "moddedReaction")}>+</button> {char.getModdedReaction()} <button on:click={() => decrementStat(char, "moddedReaction")}>-</button> |
-                    Intuition: <button on:click={() => incrementStat(char, "moddedIntuition")}>+</button> {char.getModdedIntuition()} <button on:click={() => decrementStat(char, "moddedIntuition")}>-</button> |
+                    Reaktion: 
+                    <button on:click={() => incrementStat(char, "moddedReaction")} disabled={char.ko}>+</button> 
+                    {char.getModdedReaction()} 
+                    <button on:click={() => decrementStat(char, "moddedReaction")} disabled={char.ko}>-</button> |
+                    Intuition: 
+                    <button on:click={() => incrementStat(char, "moddedIntuition")} disabled={char.ko}>+</button> 
+                    {char.getModdedIntuition()} 
+                    <button on:click={() => decrementStat(char, "moddedIntuition")} disabled={char.ko}>-</button> |
                     Ini-D: 
-                    <button on:click={() => incrementStat(char, "moddedInitiativePasses")}>+</button>
+                    <button on:click={() => incrementStat(char, "moddedInitiativePasses")} disabled={char.ko}>+</button>
                     {char.roundInitiativePasses}
                     {#if $GMCharacters.find(c => c.getName() === char.getName()).moddedInitiativePasses > char.roundInitiativePasses}
                       ( +{ $GMCharacters.find(c => c.getName() === char.getName()).moddedInitiativePasses - char.roundInitiativePasses } )
                     {/if}
-                    <button on:click={() => decrementStat(char, "moddedInitiativePasses")}>-</button> |
-                    Wound Modifiers: <button on:click={() => incrementStat(char, "woundModifiers")}>+</button> {char.getWoundModifiers()} <button on:click={() => decrementStat(char, "woundModifiers")}>-</button>
+                    <button on:click={() => decrementStat(char, "moddedInitiativePasses")} disabled={char.ko}>-</button> |
+                    Wound Modifiers: 
+                    <button on:click={() => incrementStat(char, "woundModifiers")} disabled={char.ko}>+</button> 
+                    {char.getWoundModifiers()} 
+                    <button on:click={() => decrementStat(char, "woundModifiers")} disabled={char.ko}>-</button>
                 </td>
                 <td>{getEffectiveInitiative(char)}</td>
                 <td>
