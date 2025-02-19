@@ -313,9 +313,12 @@
             console.log(`[decrementStat] ${character.getName()} - woundModifiers decreased to ${newValue}`);
         } else if (stat === "moddedInitiativePasses") {
             const currentValue = character.getModdedInitiativePasses();
+            if (currentValue <= 0) {
+                console.log(`[decrementStat] ${character.getName()} - moddedInitiativePasses is already 0, cannot decrease further.`);
+                return;
+            }
             const newValue = currentValue - 1;
             updateGMCharacter(character, { moddedInitiativePasses: newValue });
-            // Verlust wirkt sofort in der Kampfrunde:
             updateCombatCharacter(character, { moddedInitiativePasses: newValue, roundInitiativePasses: newValue });
             console.log(
                 `[decrementStat] ${character.getName()} - moddedInitiativePasses decreased to ${newValue} (roundInitiativePasses updated to ${newValue})`
