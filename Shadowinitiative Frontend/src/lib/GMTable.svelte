@@ -19,7 +19,13 @@
                     {char.getName()} |
                     Reaktion: <button on:click={() => incrementStat(char, "moddedReaction")}>+</button> {char.getModdedReaction()} <button on:click={() => decrementStat(char, "moddedReaction")}>-</button> |
                     Intuition: <button on:click={() => incrementStat(char, "moddedIntuition")}>+</button> {char.getModdedIntuition()} <button on:click={() => decrementStat(char, "moddedIntuition")}>-</button> |
-                    Ini-D: <button on:click={() => incrementStat(char, "moddedInitiativePasses")}>+</button> {char.roundInitiativePasses} <button on:click={() => decrementStat(char, "moddedInitiativePasses")}>-</button> |
+                    Ini-D: 
+                    <button on:click={() => incrementStat(char, "moddedInitiativePasses")}>+</button>
+                    {char.roundInitiativePasses}
+                    {#if $GMCharacters.find(c => c.getName() === char.getName()).moddedInitiativePasses > char.roundInitiativePasses}
+                      ( +{ $GMCharacters.find(c => c.getName() === char.getName()).moddedInitiativePasses - char.roundInitiativePasses } )
+                    {/if}
+                    <button on:click={() => decrementStat(char, "moddedInitiativePasses")}>-</button> |
                     Wound Modifiers: <button on:click={() => incrementStat(char, "woundModifiers")}>+</button> {char.getWoundModifiers()} <button on:click={() => decrementStat(char, "woundModifiers")}>-</button>
                 </td>
                 <td>{getEffectiveInitiative(char)}</td>
