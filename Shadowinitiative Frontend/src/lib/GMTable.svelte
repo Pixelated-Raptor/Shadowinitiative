@@ -5,11 +5,10 @@
                 <th>Name und Stats</th>
                 <th>Initiativeergebnis</th>
                 <th>Sichtbar für PCs?</th>
-                <th>INI-D: 1</th>
-                <th>INI-D: 2</th>
-                <th>INI-D: 3</th>
-                <th>INI-D: 4</th>
-                <th>KO</th>  <!-- Neue Spalte -->
+                {#each passes as pass}
+                    <th>INI-D: {pass}</th>
+                {/each}
+                <th>KO</th>
             </tr>
         </thead>
         <tbody>
@@ -41,28 +40,28 @@
                 <td>
                     <input type="checkbox" checked={char.getVisibility()} on:change={() => toggleVisibility(char)} />
                 </td>
-                {#each [1,2,3,4] as pass}
-                <td>
-                    {#if pass === $currentIniPass}
-                    {#if isCharacterActive(char)}
-                    <!-- Normale Aktionsbuttons -->
-                    <button on:click={() => recordAction(char, pass, 'Frei')}>Frei</button>
-                    <button on:click={() => recordAction(char, pass, 'Einfach')}>Einfach</button>
-                    <button on:click={() => recordAction(char, pass, 'Komplex')}>Komplex</button>
-                    <button on:click={() => delayAction(char, pass)}>Verzögern</button>
-                    {:else if char.delayed}
-                    <!-- Für verzögerte Charaktere: Möglichkeit, nun sofort zu handeln -->
-                    <button on:click={() => activateDelayed(char, pass)}>Jetzt handeln</button>
-                    {/if}
-                    {#if char.actions && char.actions[pass]}
-                    <div>{char.actions[pass].join(", ")}</div>
-                    {/if}
-                    {:else if char.actions && char.actions[pass]}
-                    <div>{char.actions[pass].join(", ")}</div>
-                    {/if}
-                </td>
+                {#each passes as pass}
+                    <td>
+                        {#if pass === $currentIniPass}
+                            {#if isCharacterActive(char)}
+                                <!-- Normale Aktionsbuttons -->
+                                <button on:click={() => recordAction(char, pass, 'Frei')}>Frei</button>
+                                <button on:click={() => recordAction(char, pass, 'Einfach')}>Einfach</button>
+                                <button on:click={() => recordAction(char, pass, 'Komplex')}>Komplex</button>
+                                <button on:click={() => delayAction(char, pass)}>Verzögern</button>
+                            {:else if char.delayed}
+                                <!-- Für verzögerte Charaktere: Möglichkeit, sofort zu handeln -->
+                                <button on:click={() => activateDelayed(char, pass)}>Jetzt handeln</button>
+                            {/if}
+                            {#if char.actions && char.actions[pass]}
+                                <div>{char.actions[pass].join(", ")}</div>
+                            {/if}
+                        {:else if char.actions && char.actions[pass]}
+                            <div>{char.actions[pass].join(", ")}</div>
+                        {/if}
+                    </td>
                 {/each}
-                <!-- Neue Spalte KO -->
+                <!-- Spalte KO -->
                 <td>
                     {#if char.ko}
                         <button on:click={() => toggleKO(char)}>Bereit</button>
@@ -133,6 +132,8 @@
     let isCombatMode = writable(false);
     let combatCharacters = writable([]);
     let currentIniPass = writable(1);
+    let maxIniPasses = 0;
+    let passes = [];
 
     // Helper: Berechnet den effektiven Initiativewert dynamisch:
     // (Reaktion + Intuition) + Initiative-Erfolge + Wound Modifier.
@@ -148,17 +149,26 @@
         updateGMCharacter(character, { initiativeSuccesses: newSuccesses });
         updateCombatCharacter(character, { initiativeSuccesses: newSuccesses });
     }
-
-    // Startet den Kampf und initialisiert für jeden Charakter ein "actions"-Objekt sowie delayed.
+    
+    // Startet den Kampf und initialisiert die Kampfdaten sowie maxIniPasses und passes
     function startCombat() {
         if (get(GMCharacters).length !== 0) {
             const combatChars = get(GMCharacters).map(char => {
                 char.actions = {};           // initialisieren
                 char.delayed = false;        // verzögerungs-Flag initialisieren
-                char.roundInitiativePasses = char.getModdedInitiativePasses(); // aktuellen Wert sichern
+                // setze roundInitiativePasses als Startwert (aus moddedInitiativePasses)
+                char.roundInitiativePasses = char.getModdedInitiativePasses();
                 return char;
             });
             combatCharacters.set(combatChars);
+            // Berechne den maximalen Wert der moddedInitiativePasses aus combatCharacters
+            maxIniPasses = combatChars.length > 0
+                ? Math.max(...combatChars.map(c => c.getModdedInitiativePasses()))
+                : 0;
+            // Erstelle das Array [1, 2, ..., maxIniPasses]
+            passes = Array.from({ length: maxIniPasses }, (_, i) => i + 1);
+            console.log("Anzahl maxIniPasses: " + maxIniPasses);
+            console.log("Anzahl Passes: " + passes);
             isCombatMode.set(true);
             currentIniPass.set(1);
         }
