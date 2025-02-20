@@ -8,7 +8,8 @@
                 {#each passes as pass}
                     <th>INI-D: {pass}</th>
                 {/each}
-                <th>KO</th>
+                <th>K.O?</th>
+                <th>Edge Aktionen</th>  <!-- Neue Spalte -->
             </tr>
         </thead>
         <tbody>
@@ -43,7 +44,7 @@
                 {#each passes as pass}
                     <td>
                         {#if pass === $currentIniPass}
-                            {#if isCharacterActive(char)}
+                            {#if isCharacterActive(char) || char.edgeActivated}
                                 <!-- Normale Aktionsbuttons -->
                                 <button on:click={() => recordAction(char, pass, 'Frei')}>Frei</button>
                                 <button on:click={() => recordAction(char, pass, 'Einfach')}>Einfach</button>
@@ -67,6 +68,20 @@
                         <button on:click={() => toggleKO(char)}>Bereit</button>
                     {:else}
                         <button on:click={() => toggleKO(char)}>K.O.</button>
+                    {/if}
+                </td>
+                <!-- Neue Spalte Edge Aktionen in jeder Zeile -->
+                <td>
+                    {#if !char.extraPassUsed && !char.ko && extraPurchaseAvailable()}
+                        <button on:click={() => buyExtraInitiative(char)}>
+                            Extra INI kaufen
+                        </button>
+                    {:else if char.extraPassUsed}
+                        Extra INI gekauft
+                    {:else}
+                        <button disabled>
+                            Extra INI (nicht verfügbar)
+                        </button>
                     {/if}
                 </td>
             </tr>
@@ -156,6 +171,7 @@
             const combatChars = get(GMCharacters).map(char => {
                 char.actions = {};           // initialisieren
                 char.delayed = false;        // verzögerungs-Flag initialisieren
+                char.extraPassUsed = false;  // neuen Flag initialisieren
                 // setze roundInitiativePasses als Startwert (aus moddedInitiativePasses)
                 char.roundInitiativePasses = char.getModdedInitiativePasses();
                 return char;
@@ -167,8 +183,6 @@
                 : 0;
             // Erstelle das Array [1, 2, ..., maxIniPasses]
             passes = Array.from({ length: maxIniPasses }, (_, i) => i + 1);
-            console.log("Anzahl maxIniPasses: " + maxIniPasses);
-            console.log("Anzahl Passes: " + passes);
             isCombatMode.set(true);
             currentIniPass.set(1);
         }
@@ -198,20 +212,20 @@
 
     // Markiert alle aktiven Charaktere im aktuellen Durchgang (mit höchstem effektivem INI-Ergebnis) als "fertig"
     function nextCharacter() {
+        console.log("nextCharacter aufgerufen, aktueller INI-Durchgang:", get(currentIniPass), "Aktive Charaktere: ", get(combatCharacters).filter(c => isCharacterActive(c)).map(c => c.getName()));
         const pass = get(currentIniPass);
-        // Nur Charaktere berücksichtigen, die nicht verzögert haben und noch nicht "fertig" sind.
-        const nonDelayedEligible = get(combatCharacters).filter(char =>
+        let nonDelayedEligible = get(combatCharacters).filter(char =>
             char.getModdedInitiativePasses() >= pass &&
             getEffectiveInitiative(char) > 0 &&
             !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig")) &&
             !char.delayed &&
             !char.ko
         );
+
         if (nonDelayedEligible.length > 0) {
             const maxEffective = Math.max(...nonDelayedEligible.map(c => getEffectiveInitiative(c)));
             const activeGroup = nonDelayedEligible.filter(c => getEffectiveInitiative(c) === maxEffective);
             activeGroup.forEach(char => {
-                // Markiere diese Charaktere als "fertig"
                 const updatedActions = { ...char.actions };
                 updatedActions[pass] = [...(updatedActions[pass] || []), "fertig"];
                 updateCombatCharacter(char, { actions: updatedActions });
@@ -225,7 +239,10 @@
                 !char.ko
             );
             if (eligiblePass) {
+                resetExtraPassFlags(); // Extra-Pass Flags zurücksetzen!
                 currentIniPass.set(nextPass);
+                console.log("HIII");
+                debugActiveCharacters();
             } else {
                 nextBattleround();
             }
@@ -278,61 +295,40 @@
             // Hole den aktuellen Wert aus dem GM-Store
             const currentValue = getGMModdedInitiativePasses(character);
             const newValue = currentValue + 1;
-            console.log(
-                `[incrementStat] ${character.getName()} - Increasing moddedInitiativePasses from ${currentValue} to ${newValue}. (Bonus applies next round)`
-            );
             // Es wird nur der GM‑Store aktualisiert – der Bonus wird in der nächsten Kampfrunde wirksam.
             updateGMCharacter(character, { moddedInitiativePasses: newValue });
         } else if (stat === "woundModifiers") {
             if (character[stat] < 0) {
                 updateGMCharacter(character, { [stat]: character[stat] + 1 });
                 updateCombatCharacter(character, { [stat]: character[stat] + 1 });
-                console.log(
-                    `[incrementStat] ${character.getName()} - woundModifiers increased to ${character[stat] + 1}`
-                );
             }
         } else {
             updateGMCharacter(character, { [stat]: character[stat] + 1 });
             updateCombatCharacter(character, { [stat]: character[stat] + 1 });
-            console.log(
-                `[incrementStat] ${character.getName()} - ${stat} increased to: ${character[stat] + 1}`
-            );
         }
     }
 
     function decrementStat(character, stat) {
-        console.log(
-            `[decrementStat] ${character.getName()} - stat: ${stat} current:`,
-            stat === "moddedInitiativePasses" ? character.getModdedInitiativePasses() : character[stat]
-        );
-        
         if (stat === "woundModifiers") {
             const newValue = character.getWoundModifiers() - 1;
             updateGMCharacter(character, { woundModifiers: newValue });
             updateCombatCharacter(character, { woundModifiers: newValue });
-            console.log(`[decrementStat] ${character.getName()} - woundModifiers decreased to ${newValue}`);
         } else if (stat === "moddedInitiativePasses") {
             const currentValue = character.getModdedInitiativePasses();
             if (currentValue <= 0) {
-                console.log(`[decrementStat] ${character.getName()} - moddedInitiativePasses is already 0, cannot decrease further.`);
                 return;
             }
             const newValue = currentValue - 1;
             updateGMCharacter(character, { moddedInitiativePasses: newValue });
             updateCombatCharacter(character, { moddedInitiativePasses: newValue, roundInitiativePasses: newValue });
-            console.log(
-                `[decrementStat] ${character.getName()} - moddedInitiativePasses decreased to ${newValue} (roundInitiativePasses updated to ${newValue})`
-            );
         } else if (character[stat] - 1 >= 0) {
             const newValue = character[stat] - 1;
             updateGMCharacter(character, { [stat]: newValue });
             updateCombatCharacter(character, { [stat]: newValue });
-            console.log(`[decrementStat] ${character.getName()} - ${stat} decreased to: ${newValue}`);
         }
     }
 
     function updateCombatCharacter(character, updates) {
-        console.log(`[updateCombatCharacter] ${character.getName()} - Updates:`, updates);
         combatCharacters.update(chars => {
             return chars.map(char => {
                 if (char.getName() === character.getName()) {
@@ -341,7 +337,6 @@
                         char,
                         updates
                     );
-                    console.log(`[updateCombatCharacter] Updated character:`, newChar);
                     return newChar;
                 }
                 return char;
@@ -352,16 +347,17 @@
     // Speichert die ausgewählte Aktion (Frei, Einfach, Komplex) 
     // Hier sammeln wir einfach alle Aktionen in einem Array für den aktuellen INI-Durchgang.
     function recordAction(character, pass, actionType) {
-        console.log(`[recordAction] ${character.getName()} - pass: ${pass} actionType: ${actionType}`);
         const previous = character.actions[pass] || [];
-        const newActions = [ ...previous, actionType ];
-        updateCombatCharacter(character, { actions: { ...character.actions, [pass]: newActions } });
+        const newActions = [...previous, actionType];
+        // Aktualisiere die Aktionen, aber setze edgeActivated hier nicht zurück.
+        updateCombatCharacter(character, {
+            actions: { ...character.actions, [pass]: newActions }
+        });
         if (character.delayed) {
             updateCombatCharacter(character, { delayed: false });
             updateGMCharacter(character, { delayed: false });
-            console.log(`[recordAction] ${character.getName()} - delayed flag reset`);
         }
-        checkPassCompletion();
+        // checkPassCompletion() wird hier nicht mehr direkt aufgerufen.
     }
 
     // Ein Charakter gilt als aktiv, wenn:
@@ -392,7 +388,6 @@
 
     // Zusätzliche Funktion, die einen verzögerten Charakter sofort aktiviert.
     function activateDelayed(character, pass) {
-        console.log(`[activateDelayed] ${character.getName()} - activating delayed for pass ${pass}`);
         updateCombatCharacter(character, { delayed: false });
         updateGMCharacter(character, { delayed: false });
         checkPassCompletion();
@@ -410,7 +405,69 @@
         const gmChars = get(GMCharacters);
         const gmChar = gmChars.find(c => c.getName() === char.getName());
         const value = gmChar ? gmChar.getModdedInitiativePasses() : char.getModdedInitiativePasses();
-        console.log(`[getGMModdedInitiativePasses] ${char.getName()} GM stored moddedInitiativePasses: ${value}`);
         return value;
+    }
+
+    // Ermittelt den ersten aktiven Charakter im aktuellen Ini-Durchgang
+    function getFirstCharacterInPass() {
+        const pass = get(currentIniPass);
+        const active = get(combatCharacters).filter(c =>
+            (c.roundInitiativePasses || c.getModdedInitiativePasses()) >= pass &&
+            getEffectiveInitiative(c) > 0 &&
+            !(c.actions && c.actions[pass] && c.actions[pass].includes("fertig")) &&
+            !c.delayed && !c.ko
+        );
+        if (active.length === 0) return null;
+        active.sort((a, b) => getEffectiveInitiative(b) - getEffectiveInitiative(a));
+        return active[0];
+    }
+
+    // Debug-Funktion, die die aktiven Charaktere im aktuellen INI-Durchgang anzeigt.
+    function debugActiveCharacters() {
+        const pass = get(currentIniPass);
+        const activeChars = get(combatCharacters).filter(char =>
+            (char.roundInitiativePasses || char.getModdedInitiativePasses()) >= pass &&
+            getEffectiveInitiative(char) > 0 &&
+            !(char.actions && char.actions[pass] && char.actions[pass].includes("fertig")) &&
+            !char.delayed && !char.ko
+        ).map(c => c.getName());
+        console.log("Neuer INI-Durchgang", pass, "- Aktive Charaktere:", activeChars);
+    }
+
+    // Neue Funktion zum Zurücksetzen des Extra-Pass Flags:
+    function resetExtraPassFlags() {
+        combatCharacters.update(chars =>
+            chars.map(c => {
+                c.extraPassUsed = false;
+                return c;
+            })
+        );
+    }
+
+    function buyExtraInitiative(character) {
+        // Prüfe, ob der Charakter schon Extra-Ini gekauft hat, ko ist oder jemand im aktuellen Durchgang "fertig" ist.
+        if (character.extraPassUsed || character.ko || !extraPurchaseAvailable()) {
+            return;
+        }
+        const newValue = character.getModdedInitiativePasses() + 1;
+        updateGMCharacter(character, { moddedInitiativePasses: newValue });
+        updateCombatCharacter(character, { 
+            moddedInitiativePasses: newValue, 
+            roundInitiativePasses: newValue,
+            extraPassUsed: true 
+        });
+        
+        // Neu berechnen der maximalen Ini-Durchgänge und des passes-Arrays:
+        combatCharacters.update(chars => {
+            const newMax = Math.max(...chars.map(c => c.getModdedInitiativePasses()));
+            maxIniPasses = newMax;
+            passes = Array.from({ length: newMax }, (_, i) => i + 1);
+            return chars;
+        });
+    }
+
+    function extraPurchaseAvailable() {
+        const pass = get(currentIniPass);
+        return !get(combatCharacters).some(c => c.actions && c.actions[pass] && c.actions[pass].includes("fertig"));
     }
 </script>
