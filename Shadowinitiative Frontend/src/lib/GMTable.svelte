@@ -444,13 +444,15 @@
         );
     }
 
+    // Änderung in buyExtraInitiative – nur die combatCharacters werden aktualisiert:
     function buyExtraInitiative(character) {
         // Prüfe, ob der Charakter schon Extra-Ini gekauft hat, ko ist oder jemand im aktuellen Durchgang "fertig" ist.
         if (character.extraPassUsed || character.ko || !extraPurchaseAvailable()) {
             return;
         }
+        // Erhöhe den temporären Wert in combatCharacters,
+        // dabei bleibt der originale Wert in GMCharacters unverändert.
         const newValue = character.getModdedInitiativePasses() + 1;
-        updateGMCharacter(character, { moddedInitiativePasses: newValue });
         updateCombatCharacter(character, { 
             moddedInitiativePasses: newValue, 
             roundInitiativePasses: newValue,
