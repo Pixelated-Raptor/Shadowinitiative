@@ -91,6 +91,8 @@
     <button on:click={endCombat}>Kampf beenden</button>
     <button on:click={nextBattleround}>Nächste Kampfrunde</button>
     <button on:click={nextCharacter}>Nächster Charakter</button>
+    <!-- Zeige den Button zur PC Tabelle nur, wenn Kampf aktiv ist -->
+    <button on:click={openPCTableWindow}>PC Tabelle öffnen</button>
 {:else}
     <!-- GM-Tabelle ohne KO-Spalte -->
     <table>
@@ -141,14 +143,19 @@
 </style>
 
 <script>
-    import { GMCharacters, updateGMCharacter, removeGMCharacter } from "./GMStore";
     import { writable, get } from "svelte/store";
+    import {
+        GMCharacters,
+        combatCharacters,
+        currentIniPass,
+        updateGMCharacter,     // Diese Zeile hinzufügen
+        removeGMCharacter      // Diese Zeile hinzufügen
+    } from "./GMStore.js";
 
     let isCombatMode = writable(false);
-    let combatCharacters = writable([]);
-    let currentIniPass = writable(1);
     let maxIniPasses = 0;
     let passes = [];
+    let showPCTable = false;
 
     // Helper: Berechnet den effektiven Initiativewert dynamisch:
     // (Reaktion + Intuition) + Initiative-Erfolge + Wound Modifier.
@@ -285,9 +292,10 @@
     }
 
     function toggleVisibility(character) {
-        character.toggleVisibility();
-        updateGMCharacter(character, { isVisible: character.getVisibility() });
-        updateCombatCharacter(character, { isVisible: character.getVisibility() });
+        const newValue = !character.getVisibility();
+        // Aktualisiere beide Stores:
+        updateGMCharacter(character, { isVisible: newValue });
+        updateCombatCharacter(character, { isVisible: newValue });
     }
 
     function incrementStat(character, stat) {
@@ -471,5 +479,9 @@
     function extraPurchaseAvailable() {
         const pass = get(currentIniPass);
         return !get(combatCharacters).some(c => c.actions && c.actions[pass] && c.actions[pass].includes("fertig"));
+    }
+
+    function openPCTableWindow() {
+        window.open("/pc-window.html", "_blank", "width=1000,height=800");
     }
 </script>
